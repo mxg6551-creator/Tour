@@ -1,0 +1,6 @@
+{
+  "name": "XEB TOUR - Esports & Ludo Arena",
+  "description": "Premier Esports Tournaments, Live 7 Up 7 Down Arena, Automated Ludo King, and Super Admin Management System.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
