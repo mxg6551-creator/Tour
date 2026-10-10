@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
+import { TopAdBanner } from './components/TopAdBanner';
 import { Header } from './components/Header';
 import { WinnerTicker } from './components/WinnerTicker';
 import { HeroSlider } from './components/HeroSlider';
@@ -59,6 +60,9 @@ const MainAppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-black text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300">
+      {/* 0. Top 720x90 Leaderboard Ad Banner (Configurable in Admin) */}
+      <TopAdBanner />
+
       {/* 1. Header Bar with 10-Click Admin Trigger & Theme Switcher */}
       <Header onSelectTab={setActiveTab} />
 

@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Users, Trophy, Wallet, Settings, 
   Plus, Edit, Trash2, KeyRound, 
-  Check, Lock, Search, Swords, Dice5, Zap, ShieldAlert, Sparkles, RefreshCw, CheckCircle2 
+  Check, Lock, Search, Swords, Dice5, Zap, ShieldAlert, Sparkles, RefreshCw, CheckCircle2,
+  Music, Volume2, Upload, Play, Square, Image, Video, ExternalLink, X 
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { UserProfile, Tournament, GameModeItem, MatchType, PaymentMethod } from '../../types';
+import { UserProfile, Tournament, GameModeItem, MatchType, PaymentMethod, HeroBannerItem, TopAdBanner } from '../../types';
 import { sound } from '../../services/sound';
 
 export const SuperAdminDashboard: React.FC = () => {
@@ -37,7 +38,11 @@ export const SuperAdminDashboard: React.FC = () => {
     updateSettings, 
     updateAdminCredentials,
     sevenUpDownRound,
-    setSevenUpDownAdminForce 
+    setSevenUpDownAdminForce,
+    addHeroBanner,
+    updateHeroBanner,
+    deleteHeroBanner,
+    updateTopAdBanner
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'USERS' | 'MODES' | 'MATCHES' | 'SEVEN_UP' | 'LUDO' | 'WALLET_SMS' | 'CMS' | 'SECURITY'>('USERS');
@@ -113,10 +118,36 @@ export const SuperAdminDashboard: React.FC = () => {
   const [referralEnabled, setReferralEnabled] = useState(settings.referralConfig?.isEnabled ?? true);
   const [referralPercent, setReferralPercent] = useState(settings.referralConfig?.commissionPercentage || 20);
 
-  const [tiktokTitle, setTiktokTitle] = useState(settings.tiktokSponsor.title);
-  const [tiktokDesc, setTiktokDesc] = useState(settings.tiktokSponsor.banglaDescription);
-  const [tiktokLink, setTiktokLink] = useState(settings.tiktokSponsor.actionUrl);
-  const [tiktokReward, setTiktokReward] = useState(settings.tiktokSponsor.rewardPer1000Views);
+  const [tiktokEnabled, setTiktokEnabled] = useState(settings.tiktokSponsor?.enabled ?? true);
+  const [tiktokTitle, setTiktokTitle] = useState(settings.tiktokSponsor?.title || 'টিকটক ভিডিও বানিয়ে ইনকাম করুন!');
+  const [tiktokDesc, setTiktokDesc] = useState(settings.tiktokSponsor?.banglaDescription || '');
+  const [tiktokLink, setTiktokLink] = useState(settings.tiktokSponsor?.actionUrl || 'https://www.tiktok.com');
+  const [tiktokReward, setTiktokReward] = useState(settings.tiktokSponsor?.rewardPer1000Views || 50);
+
+  // Top 720x90 Ad Banner State
+  const [topAdEnabled, setTopAdEnabled] = useState(settings.topAdBanner?.enabled ?? true);
+  const [topAdType, setTopAdType] = useState<'IMAGE' | 'HTML'>(settings.topAdBanner?.type || 'IMAGE');
+  const [topAdImageUrl, setTopAdImageUrl] = useState(settings.topAdBanner?.imageUrl || 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80');
+  const [topAdRedirectUrl, setTopAdRedirectUrl] = useState(settings.topAdBanner?.redirectUrl || 'https://t.me/xebtour_official_support');
+  const [topAdHtmlCode, setTopAdHtmlCode] = useState(settings.topAdBanner?.htmlCode || '');
+
+  // 7 Up 7 Down 24/7 Engine Settings (Music & Bots)
+  const [sevenUpMusicEnabled, setSevenUpMusicEnabled] = useState(settings.sevenUpDownConfig?.musicEnabled ?? true);
+  const [sevenUpMusicUrl, setSevenUpMusicUrl] = useState(settings.sevenUpDownConfig?.musicUrl || '');
+  const [sevenUpShowBots, setSevenUpShowBots] = useState(settings.sevenUpDownConfig?.showBots !== false);
+  const [sevenUpMinBet, setSevenUpMinBet] = useState(settings.sevenUpDownConfig?.minBet || 10);
+  const [isTestMusicPlaying, setIsTestMusicPlaying] = useState(false);
+  const testAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Hero Slider Banners Management State
+  const [isCreatingBanner, setIsCreatingBanner] = useState(false);
+  const [editingBanner, setEditingBanner] = useState<HeroBannerItem | null>(null);
+  const [bannerTitleInput, setBannerTitleInput] = useState('');
+  const [bannerSubtitleInput, setBannerSubtitleInput] = useState('');
+  const [bannerTagInput, setBannerTagInput] = useState('HOT EVENT');
+  const [bannerImageInput, setBannerImageInput] = useState('');
+  const [bannerActionInput, setBannerActionInput] = useState<'ESPORTS' | 'SEVEN_UP' | 'LUDO' | 'LINK'>('ESPORTS');
+  const [bannerExternalUrlInput, setBannerExternalUrlInput] = useState('');
 
   const [telegramLink, setTelegramLink] = useState(settings.telegramSupportLink);
   const [bKashNum, setBKashNum] = useState(settings.paymentNumbers.bKash);
@@ -205,6 +236,13 @@ export const SuperAdminDashboard: React.FC = () => {
       siteTagline: siteTagline.trim() || 'Esports & Ludo Arena',
       siteLogoIcon: siteLogoIcon.trim() || '⚡',
       siteLogoUrl: siteLogoUrl.trim() || undefined,
+      topAdBanner: {
+        enabled: topAdEnabled,
+        type: topAdType,
+        imageUrl: topAdImageUrl.trim(),
+        redirectUrl: topAdRedirectUrl.trim(),
+        htmlCode: topAdHtmlCode
+      },
       popupNotice: {
         enabled: noticeEnabled,
         title: noticeTitle,
@@ -219,6 +257,7 @@ export const SuperAdminDashboard: React.FC = () => {
       },
       tiktokSponsor: {
         ...settings.tiktokSponsor,
+        enabled: tiktokEnabled,
         title: tiktokTitle,
         banglaDescription: tiktokDesc,
         actionUrl: tiktokLink,
@@ -233,7 +272,92 @@ export const SuperAdminDashboard: React.FC = () => {
       }
     });
     sound.playCoin();
-    alert('ওয়েবসাইটের নাম, ব্র্যান্ডিং এবং CMS তথ্য সফলভাবে আপডেট হয়েছে!');
+    alert('ওয়েবসাইটের নাম, ব্র্যান্ডিং, বিজ্ঞাপন ও CMS তথ্য সফলভাবে আপডেট হয়েছে!');
+  };
+
+  const handleMusicFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        setSevenUpMusicUrl(dataUrl);
+        updateSettings({
+          sevenUpDownConfig: {
+            ...settings.sevenUpDownConfig,
+            musicUrl: dataUrl,
+            musicEnabled: true
+          }
+        });
+        sound.playVictory();
+        alert('অডিও ফাইল সফলভাবে আপলোড হয়েছে! এটি ৭ আপ ৭ ডাউন খেলায় ২৪/৭ বাজবে।');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleToggleTestMusic = () => {
+    if (isTestMusicPlaying) {
+      if (testAudioRef.current) {
+        testAudioRef.current.pause();
+      }
+      setIsTestMusicPlaying(false);
+    } else {
+      const url = sevenUpMusicUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+      if (!testAudioRef.current) {
+        testAudioRef.current = new Audio();
+        testAudioRef.current.loop = true;
+      }
+      testAudioRef.current.src = url;
+      testAudioRef.current.play().catch(() => {});
+      setIsTestMusicPlaying(true);
+    }
+  };
+
+  const handleSaveSevenUpSettings = () => {
+    updateSettings({
+      sevenUpDownConfig: {
+        ...settings.sevenUpDownConfig,
+        musicEnabled: sevenUpMusicEnabled,
+        musicUrl: sevenUpMusicUrl,
+        showBots: sevenUpShowBots,
+        minBet: Number(sevenUpMinBet)
+      }
+    });
+    sound.playCoin();
+    alert('৭ আপ ৭ ডাউন ক্যাসিনো সেটিংস সফলভাবে সেভ হয়েছে!');
+  };
+
+  const handleCreateBannerSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bannerTitleInput.trim() || !bannerImageInput.trim()) {
+      alert('ব্যানার শিরোনাম ও ইমেজ URL প্রদান করুন!');
+      return;
+    }
+    addHeroBanner({
+      title: bannerTitleInput.trim(),
+      subtitle: bannerSubtitleInput.trim(),
+      tag: bannerTagInput.trim() || 'FEATURED',
+      imageUrl: bannerImageInput.trim(),
+      action: bannerActionInput,
+      externalUrl: bannerExternalUrlInput.trim() || undefined,
+      isEnabled: true
+    });
+    setIsCreatingBanner(false);
+    setBannerTitleInput('');
+    setBannerSubtitleInput('');
+    setBannerImageInput('');
+    setBannerExternalUrlInput('');
+    sound.playVictory();
+  };
+
+  const handleSaveEditBanner = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBanner) return;
+    updateHeroBanner(editingBanner);
+    setEditingBanner(null);
+    sound.playCoin();
   };
 
   const handleCreateModeSubmit = (e: React.FormEvent) => {
@@ -1531,6 +1655,144 @@ export const SuperAdminDashboard: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Minimum Bet Setting */}
+            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+              <h4 className="text-sm font-black text-amber-400">সর্বনিম্ন বাজি (Minimum Bet):</h4>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min="5"
+                  value={sevenUpMinBet}
+                  onChange={(e) => setSevenUpMinBet(Number(e.target.value))}
+                  className="w-36 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono font-bold text-sm"
+                />
+                <span className="text-xs text-slate-400">টাকা (দান ধরার সর্বনিম্ন লিমিট)</span>
+              </div>
+            </div>
+
+            {/* 24/7 Background Music Controller (Admin file upload & URL) */}
+            <div className="p-4 rounded-2xl bg-slate-900 border border-purple-500/40 space-y-4 shadow-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-black text-purple-300 flex items-center gap-2">
+                    <Music className="w-4 h-4 text-purple-400" />
+                    <span>২৪/৭ ব্যাকগ্রাউন্ড মিউজিক কন্ট্রোলার (24/7 BGM)</span>
+                  </h4>
+                  <p className="text-xs text-slate-400">ফোন বা গ্যালারি থেকে অডিও ফাইল আপলোড করুন অথবা ডিরেক্ট URL দিন</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSevenUpMusicEnabled(!sevenUpMusicEnabled)}
+                  className={`py-1.5 px-3.5 rounded-xl text-xs font-black cursor-pointer transition-all ${
+                    sevenUpMusicEnabled
+                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40'
+                      : 'bg-red-950 text-red-400 border border-red-500/40'
+                  }`}
+                >
+                  {sevenUpMusicEnabled ? 'মিউজিক চালু (ON)' : 'মিউজিক বন্ধ (OFF)'}
+                </button>
+              </div>
+
+              {/* File upload from Phone/Gallery */}
+              <div className="space-y-2">
+                <label className="text-[11px] text-slate-300 font-bold block">
+                  📁 ফোন বা গ্যালারি থেকে অডিও ফাইল সিলেক্ট করুন:
+                </label>
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                  <label className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md">
+                    <Upload className="w-4 h-4" />
+                    <span>অডিও ফাইল আপলোড (MP3/WAV/OGG)</span>
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      onChange={handleMusicFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleToggleTestMusic}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-yellow-300 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer border border-slate-700"
+                  >
+                    {isTestMusicPlaying ? <Square className="w-3.5 h-3.5 text-red-400 fill-red-400" /> : <Play className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400" />}
+                    <span>{isTestMusicPlaying ? 'টেস্ট মিউজিক থামান' : 'প্রিভিউ টেস্ট শুনুন'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Or Direct audio URL */}
+              <div>
+                <label className="text-[11px] text-slate-400 block mb-1">কাস্টম মিউজিক URL (অনলাইন লিংক):</label>
+                <input
+                  type="text"
+                  value={sevenUpMusicUrl}
+                  onChange={(e) => setSevenUpMusicUrl(e.target.value)}
+                  placeholder="https://example.com/casino-jazz.mp3"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono text-xs"
+                />
+              </div>
+
+              {/* Sample presets */}
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-slate-400 text-[11px]">প্রিসেট মিউজিক:</span>
+                <button
+                  type="button"
+                  onClick={() => setSevenUpMusicUrl('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3')}
+                  className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px]"
+                >
+                  ক্যাসিনো লাউঞ্জ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSevenUpMusicUrl('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3')}
+                  className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px]"
+                >
+                  গ্র্যান্ড এরিনা
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSevenUpMusicUrl('')}
+                  className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 text-[10px]"
+                >
+                  ডিফল্ট সিন্থেসাইজার
+                </button>
+              </div>
+            </div>
+
+            {/* Fair Play & Bot Toggle (User requested!) */}
+            <div className="p-4 rounded-2xl bg-slate-900 border border-cyan-500/40 space-y-3 shadow-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-black text-cyan-300 flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4 text-cyan-400" />
+                    <span>বট প্লেয়ার কন্ট্রোল (Bot Players Toggle - ১০০% ফেয়ার)</span>
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    বট অফ করলে কোনো ফেক প্লেয়ার থাকবে না। শুধুমাত্র আসল জয়েন করা ইউজারদের টপ ব্যালেন্স ও উইন স্ট্রিক দেখাবে।
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSevenUpShowBots(!sevenUpShowBots)}
+                  className={`py-1.5 px-3.5 rounded-xl text-xs font-black cursor-pointer transition-all ${
+                    sevenUpShowBots
+                      ? 'bg-amber-950 text-amber-400 border border-amber-500/40'
+                      : 'bg-emerald-950 text-emerald-400 border border-emerald-500/40'
+                  }`}
+                >
+                  {sevenUpShowBots ? 'বট চালু (ON)' : 'বট বন্ধ (OFF - ১০০% ফেয়ার)'}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSaveSevenUpSettings}
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-sm cursor-pointer shadow-lg hover:brightness-105 active:scale-95 transition-all"
+            >
+              ৭ আপ ৭ ডাউন সেটিংস সেভ করুন
+            </button>
           </div>
         )}
 
@@ -1797,7 +2059,442 @@ export const SuperAdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* 2. Referral System On/Off Toggle (User Requested!) */}
+            {/* 2. Top 720x90 Leaderboard Ad Section (User Requested!) */}
+            <div className="p-4 rounded-2xl bg-slate-900 border border-amber-500/40 space-y-3 shadow-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-black text-amber-400 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <span>ওয়েবসাইট শীর্ষ ৭২০×৯০ অ্যাড ব্যানার (Top 720×90 Leaderboard Ad)</span>
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    ওয়েবসাইটের সবার উপরে ৭২০×৯০ অ্যাড কোড বা ব্যানার ইমেজ দেখান ও অন/অফ করুন
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setTopAdEnabled(!topAdEnabled)}
+                  className={`py-1.5 px-3.5 rounded-xl text-xs font-black cursor-pointer transition-all ${
+                    topAdEnabled
+                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40'
+                      : 'bg-red-950 text-red-400 border border-red-500/40'
+                  }`}
+                >
+                  {topAdEnabled ? 'অ্যাড চালু (ON)' : 'অ্যাড বন্ধ (OFF - Hide)'}
+                </button>
+              </div>
+
+              {topAdEnabled && (
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-xs cursor-pointer font-bold">
+                      <input
+                        type="radio"
+                        name="topAdType"
+                        checked={topAdType === 'IMAGE'}
+                        onChange={() => setTopAdType('IMAGE')}
+                        className="accent-amber-400"
+                      />
+                      <span>ব্যানার ইমেজ ও লিংক (Image + Link)</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs cursor-pointer font-bold">
+                      <input
+                        type="radio"
+                        name="topAdType"
+                        checked={topAdType === 'HTML'}
+                        onChange={() => setTopAdType('HTML')}
+                        className="accent-amber-400"
+                      />
+                      <span>কাস্টম HTML / স্ক্রিপ্ট অ্যাড কোড (HTML/Script Ad Code)</span>
+                    </label>
+                  </div>
+
+                  {topAdType === 'IMAGE' ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">ব্যানার ইমেজ URL (৭২০×৯০ সাইজ রিকমেন্ডেড):</label>
+                        <input
+                          type="text"
+                          value={topAdImageUrl}
+                          onChange={(e) => setTopAdImageUrl(e.target.value)}
+                          placeholder="https://..."
+                          className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">ক্লিক রিডাইরেক্ট লিংক (Destination Link):</label>
+                        <input
+                          type="text"
+                          value={topAdRedirectUrl}
+                          onChange={(e) => setTopAdRedirectUrl(e.target.value)}
+                          placeholder="https://t.me/..."
+                          className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">অ্যাড নেটওয়ার্ক বা কাস্টম HTML কোড বসান:</label>
+                      <textarea
+                        rows={3}
+                        value={topAdHtmlCode}
+                        onChange={(e) => setTopAdHtmlCode(e.target.value)}
+                        placeholder="<script>...</script> অথবা <div>...</div>"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono text-xs leading-relaxed"
+                      />
+                    </div>
+                  )}
+
+                  {/* Live Preview */}
+                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                    <span className="text-[11px] font-bold text-amber-400 block">লাইভ প্রিভিউ (720×90 Preview):</span>
+                    <div className="w-full max-w-[720px] h-[70px] sm:h-[90px] rounded-lg overflow-hidden border border-slate-700 bg-slate-900 flex items-center justify-center relative">
+                      {topAdType === 'IMAGE' && topAdImageUrl ? (
+                        <img src={topAdImageUrl} alt="Ad Preview" className="w-full h-full object-cover" />
+                      ) : topAdType === 'HTML' && topAdHtmlCode ? (
+                        <div dangerouslySetInnerHTML={{ __html: topAdHtmlCode }} />
+                      ) : (
+                        <span className="text-xs text-slate-500">অ্যাড প্রিভিউ প্রদর্শিত হবে</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 3. TikTok Video Earning Banner Control (User Requested!) */}
+            <div className="p-4 rounded-2xl bg-slate-900 border border-pink-500/30 space-y-3 shadow-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-black text-pink-400 flex items-center gap-2">
+                    <Video className="w-4 h-4 text-pink-400" />
+                    <span>টিকটক ভিডিও বানিয়ে ইনকাম ব্যানার কন্ট্রোল</span>
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    হোম পেজে টিকটক ইনকাম অফার ব্যানার অন বা অফ করুন এবং ডিটেইলস পরিবর্তন করুন
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setTiktokEnabled(!tiktokEnabled)}
+                  className={`py-1.5 px-3.5 rounded-xl text-xs font-black cursor-pointer transition-all ${
+                    tiktokEnabled
+                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40'
+                      : 'bg-red-950 text-red-400 border border-red-500/40'
+                  }`}
+                >
+                  {tiktokEnabled ? 'ব্যানার চালু (ON)' : 'ব্যানার বন্ধ (OFF - Hide)'}
+                </button>
+              </div>
+
+              {tiktokEnabled && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  <div>
+                    <label className="text-[11px] text-slate-400 block mb-1">ব্যানার শিরোনাম:</label>
+                    <input
+                      type="text"
+                      value={tiktokTitle}
+                      onChange={(e) => setTiktokTitle(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-bold text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-slate-400 block mb-1">প্রতি ১০০০ ভিউতে রিওয়ার্ড (৳):</label>
+                    <input
+                      type="number"
+                      value={tiktokReward}
+                      onChange={(e) => setTiktokReward(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono text-xs"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-[11px] text-slate-400 block mb-1">বিস্তারিত বিবরণ (বাংলায়):</label>
+                    <textarea
+                      rows={2}
+                      value={tiktokDesc}
+                      onChange={(e) => setTiktokDesc(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs leading-relaxed"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-[11px] text-slate-400 block mb-1">টিকটক / ভিডিও জমা দেওয়ার লিংক:</label>
+                    <input
+                      type="text"
+                      value={tiktokLink}
+                      onChange={(e) => setTiktokLink(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono text-xs"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 4. Hero Slider Banners Manager (Add/Edit/Delete/Link - User Requested!) */}
+            <div className="p-4 rounded-2xl bg-slate-900 border border-purple-500/30 space-y-4 shadow-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-black text-purple-300 flex items-center gap-2">
+                    <Image className="w-4 h-4 text-purple-400" />
+                    <span>হোম স্লাইডার ব্যানার ম্যানেজার (Hero Slider Manager)</span>
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    নতুন স্লাইড ব্যানার যোগ করুন, ডিলিট করুন, এডিট করুন ও কাস্টম লিংক সেট করুন
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playClick();
+                    setIsCreatingBanner(true);
+                  }}
+                  className="py-1.5 px-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs flex items-center gap-1.5 cursor-pointer shadow"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>নতুন ব্যানার যোগ করুন</span>
+                </button>
+              </div>
+
+              {/* Banners List */}
+              <div className="space-y-2.5">
+                {(settings.heroBanners || []).map((banner) => (
+                  <div key={banner.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img src={banner.imageUrl} alt="" className="w-14 h-10 rounded-lg object-cover border border-slate-700 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20 uppercase">
+                            {banner.tag}
+                          </span>
+                          <span className="text-[10px] text-purple-300 font-mono">
+                            অ্যাকশন: {banner.action}
+                          </span>
+                        </div>
+                        <h5 className="text-xs font-bold text-white truncate max-w-xs">{banner.title}</h5>
+                        <p className="text-[11px] text-slate-400 truncate max-w-xs">{banner.subtitle}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateHeroBanner({
+                            ...banner,
+                            isEnabled: !banner.isEnabled
+                          });
+                        }}
+                        className={`px-2 py-1 rounded text-[10px] font-bold cursor-pointer ${
+                          banner.isEnabled
+                            ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {banner.isEnabled ? 'চালু' : 'বন্ধ'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sound.playClick();
+                          setEditingBanner(banner);
+                        }}
+                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white cursor-pointer"
+                        title="এডিট"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sound.playClick();
+                          deleteHeroBanner(banner.id);
+                        }}
+                        className="p-1.5 rounded-lg bg-red-950 hover:bg-red-900 text-red-400 cursor-pointer"
+                        title="ডিলিট"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add New Banner Modal */}
+              {isCreatingBanner && (
+                <div className="p-4 rounded-xl bg-purple-950/40 border border-purple-500/40 space-y-3">
+                  <h5 className="text-xs font-black text-purple-300">নতুন স্লাইড ব্যানার তৈরি করুন:</h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[10px] text-slate-400">শিরোনাম:</label>
+                      <input
+                        type="text"
+                        value={bannerTitleInput}
+                        onChange={(e) => setBannerTitleInput(e.target.value)}
+                        placeholder="যেমন: গ্র্যান্ড মেগা কাপ"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400">ট্যাগ ব্যাজ:</label>
+                      <input
+                        type="text"
+                        value={bannerTagInput}
+                        onChange={(e) => setBannerTagInput(e.target.value)}
+                        placeholder="HOT TOURNAMENT"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="text-[10px] text-slate-400">উপশিরোনাম / বিবরণ:</label>
+                      <input
+                        type="text"
+                        value={bannerSubtitleInput}
+                        onChange={(e) => setBannerSubtitleInput(e.target.value)}
+                        placeholder="এন্ট্রি নিন ও আসল টাকা জিতুন"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400">ব্যানার ইমেজ URL:</label>
+                      <input
+                        type="text"
+                        value={bannerImageInput}
+                        onChange={(e) => setBannerImageInput(e.target.value)}
+                        placeholder="https://..."
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white font-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400">ক্লিক অ্যাকশন:</label>
+                      <select
+                        value={bannerActionInput}
+                        onChange={(e) => setBannerActionInput(e.target.value as any)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs font-bold"
+                      >
+                        <option value="ESPORTS">টুর্নামেন্ট ম্যাচ সেকশন</option>
+                        <option value="SEVEN_UP">৭ আপ ৭ ডাউন ক্যাসিনো ওপেন</option>
+                        <option value="LUDO">লুডু এরিনা ওপেন</option>
+                        <option value="LINK">কাস্টম এক্সটার্নাল লিংক (Open Link)</option>
+                      </select>
+                    </div>
+                    {bannerActionInput === 'LINK' && (
+                      <div className="sm:col-span-2">
+                        <label className="text-[10px] text-slate-400">এক্সটার্নাল ওয়েব লিংক URL:</label>
+                        <input
+                          type="text"
+                          value={bannerExternalUrlInput}
+                          onChange={(e) => setBannerExternalUrlInput(e.target.value)}
+                          placeholder="https://..."
+                          className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white font-mono text-xs"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleCreateBannerSubmit}
+                      className="py-1.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs cursor-pointer"
+                    >
+                      ব্যানার সেভ করুন
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreatingBanner(false)}
+                      className="py-1.5 px-3 rounded-xl bg-slate-800 text-slate-300 text-xs cursor-pointer"
+                    >
+                      বাতিল
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Edit Existing Banner Modal */}
+              {editingBanner && (
+                <div className="p-4 rounded-xl bg-slate-950 border border-yellow-500/40 space-y-3">
+                  <h5 className="text-xs font-black text-yellow-300">ব্যানার তথ্য এডিট করুন:</h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[10px] text-slate-400">শিরোনাম:</label>
+                      <input
+                        type="text"
+                        value={editingBanner.title}
+                        onChange={(e) => setEditingBanner({ ...editingBanner, title: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400">ট্যাগ:</label>
+                      <input
+                        type="text"
+                        value={editingBanner.tag}
+                        onChange={(e) => setEditingBanner({ ...editingBanner, tag: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="text-[10px] text-slate-400">উপশিরোনাম:</label>
+                      <input
+                        type="text"
+                        value={editingBanner.subtitle}
+                        onChange={(e) => setEditingBanner({ ...editingBanner, subtitle: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400">ইমেজ URL:</label>
+                      <input
+                        type="text"
+                        value={editingBanner.imageUrl}
+                        onChange={(e) => setEditingBanner({ ...editingBanner, imageUrl: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400">ক্লিক অ্যাকশন:</label>
+                      <select
+                        value={editingBanner.action}
+                        onChange={(e) => setEditingBanner({ ...editingBanner, action: e.target.value as any })}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs"
+                      >
+                        <option value="ESPORTS">ESPORTS</option>
+                        <option value="SEVEN_UP">SEVEN_UP</option>
+                        <option value="LUDO">LUDO</option>
+                        <option value="LINK">LINK</option>
+                      </select>
+                    </div>
+                    {editingBanner.action === 'LINK' && (
+                      <div className="sm:col-span-2">
+                        <label className="text-[10px] text-slate-400">এক্সটার্নাল লিংক URL:</label>
+                        <input
+                          type="text"
+                          value={editingBanner.externalUrl || ''}
+                          onChange={(e) => setEditingBanner({ ...editingBanner, externalUrl: e.target.value })}
+                          className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-xs"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleSaveEditBanner}
+                      className="py-1.5 px-4 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs cursor-pointer"
+                    >
+                      আপডেট সেভ করুন
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingBanner(null)}
+                      className="py-1.5 px-3 rounded-xl bg-slate-800 text-slate-300 text-xs cursor-pointer"
+                    >
+                      বাতিল
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 5. Referral System On/Off Toggle (User Requested!) */}
             <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 shadow-md">
               <div className="flex items-center justify-between">
                 <div>

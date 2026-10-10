@@ -141,6 +141,28 @@ export interface SevenUpDownConfig {
   sevenFrequencyPerHour: number; // how many 7s target per hour
   adminNextRollForce?: number; // admin can force e.g. 7, 3, 11
   minBet: number;
+  musicEnabled: boolean;
+  musicUrl: string;
+  showBots: boolean;
+}
+
+export interface HeroBannerItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  imageUrl: string;
+  tag: string;
+  action: 'ESPORTS' | 'SEVEN_UP' | 'LUDO' | 'LINK';
+  externalUrl?: string;
+  isEnabled: boolean;
+}
+
+export interface TopAdBanner {
+  enabled: boolean;
+  type: 'IMAGE' | 'HTML';
+  imageUrl?: string;
+  redirectUrl?: string;
+  htmlCode?: string;
 }
 
 export interface AppSettings {
@@ -148,6 +170,8 @@ export interface AppSettings {
   siteTagline?: string;
   siteLogoUrl?: string;
   siteLogoIcon: string;
+  topAdBanner: TopAdBanner;
+  heroBanners: HeroBannerItem[];
   popupNotice: {
     enabled: boolean;
     title: string;

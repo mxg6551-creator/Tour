@@ -2,17 +2,20 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { 
   UserProfile, Tournament, TournamentSlot, WalletTransaction, AppSettings, 
   SMSMessage, GameModeItem, SevenUpDownHistoryItem, LiveWinnerAnnouncement, 
-  MatchType, PaymentMethod 
+  MatchType, PaymentMethod, HeroBannerItem, TopAdBanner 
 } from '../types';
 import { ASSET_IMAGES } from '../assets/images';
 import { sound } from '../services/sound';
 
-interface OtherPlayerSeat {
+export interface OtherPlayerSeat {
   id: string;
   name: string;
   avatar: string;
-  titleBadge: string;
+  titleBadge?: string;
   chipsAmount: number;
+  side: 'LEFT' | 'RIGHT';
+  rank: 1 | 2 | 3;
+  winStreak?: number;
   betTarget?: 'DOWN' | 'SEVEN' | 'UP';
   currentBet?: number;
 }
@@ -84,6 +87,12 @@ interface AppContextType {
   setSevenUpDownAdminForce: (forceVal?: number) => void;
   is7Up7DownModalOpen: boolean;
   setIs7Up7DownModalOpen: (open: boolean) => void;
+
+  // Hero Banners & Top Ad
+  addHeroBanner: (banner: Omit<HeroBannerItem, 'id'>) => void;
+  updateHeroBanner: (banner: HeroBannerItem) => void;
+  deleteHeroBanner: (id: string) => void;
+  updateTopAdBanner: (ad: Partial<TopAdBanner>) => void;
 
   // Live Winner Marquee
   winnerAnnouncements: LiveWinnerAnnouncement[];
@@ -193,10 +202,48 @@ const initialGameModes: GameModeItem[] = [
   }
 ];
 
+const initialHeroBanners: HeroBannerItem[] = [
+  {
+    id: 'b-1',
+    title: 'XEB TOUR গ্র্যান্ড টুর্নামেন্ট এরিনা',
+    subtitle: 'Free Fire BR & Clash Squad এন্ট্রি নিন ও আসল প্রাইজ পুল জিতুন',
+    imageUrl: ASSET_IMAGES.heroBanner,
+    tag: 'FEATURED ESPORTS',
+    action: 'ESPORTS',
+    isEnabled: true
+  },
+  {
+    id: 'b-2',
+    title: '৭ আপ ৭ ডাউন ক্যাসিনো লাইভ এরিনা (24/7 Live)',
+    subtitle: '২-৬ ডাউন, ৮-১২ আপ এবং লাকি ৭ ডাইস বাজি ধরে লাইভ জয়ী হোন!',
+    imageUrl: ASSET_IMAGES.gameMode7Up7Down,
+    tag: 'HOT CASINO GAME',
+    action: 'SEVEN_UP',
+    isEnabled: true
+  },
+  {
+    id: 'b-3',
+    title: 'লুডু কিং ক্লাসিক ১v১, ২v২ ও ৪v৪ ব্যাটেল',
+    subtitle: '১০০% ফেয়ার ও আসল ডাইস রোলিং সিস্টেমে খেলুন',
+    imageUrl: ASSET_IMAGES.gameModeLudo,
+    tag: 'LUDO KING LIVE',
+    action: 'LUDO',
+    isEnabled: true
+  }
+];
+
 const initialSettings: AppSettings = {
   siteBrandText: 'XEB TOUR',
   siteTagline: 'Esports & Ludo Arena',
   siteLogoIcon: '⚡',
+  topAdBanner: {
+    enabled: true,
+    type: 'IMAGE',
+    imageUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80',
+    redirectUrl: 'https://t.me/xebtour_official_support',
+    htmlCode: ''
+  },
+  heroBanners: initialHeroBanners,
   popupNotice: {
     enabled: true,
     title: 'স্বাগতম XEB TOUR প্রফেশনাল টুর্নামেন্ট ও গেমিং এরিনায়!',
@@ -248,7 +295,10 @@ const initialSettings: AppSettings = {
     payoutMultiplierSeven: 4.0,
     lightningMultiplierSeven: 6.0,
     sevenFrequencyPerHour: 12,
-    minBet: 10
+    minBet: 10,
+    musicEnabled: true,
+    musicUrl: '',
+    showBots: true
   }
 };
 
@@ -425,10 +475,75 @@ const initialWinners: LiveWinnerAnnouncement[] = [
 ];
 
 const initialCasinoSeats: OtherPlayerSeat[] = [
-  { id: 'p1', name: 'Marsh', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Marsh', titleBadge: 'রিচি রিচ', chipsAmount: 53347, betTarget: 'UP', currentBet: 500 },
-  { id: 'p2', name: 'Lobo81', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Lobo81', titleBadge: 'মেগামিলিয়নেয়ার', chipsAmount: 30089, betTarget: 'DOWN', currentBet: 200 },
-  { id: 'p3', name: 'name528300', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=name528300', titleBadge: 'হিউম্যান ক্যালকুলেটর', chipsAmount: 33141, betTarget: 'SEVEN', currentBet: 100 },
-  { id: 'p4', name: 'Marc', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Marc', titleBadge: 'লাকি প্লেয়ার', chipsAmount: 32785, betTarget: 'UP', currentBet: 300 }
+  // LEFT SIDE (Top Balance: Rank 1, 2, 3 as shown in screenshot)
+  {
+    id: 'left-1',
+    side: 'LEFT',
+    rank: 1,
+    name: 'name196067',
+    avatar: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=120&q=80',
+    titleBadge: 'রিচি রিচ',
+    chipsAmount: 68542.26,
+    betTarget: 'UP',
+    currentBet: 500
+  },
+  {
+    id: 'left-2',
+    side: 'LEFT',
+    rank: 2,
+    name: 'Landon',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+    titleBadge: 'মেগামিলিয়নেয়ার',
+    chipsAmount: 42249.49,
+    betTarget: 'DOWN',
+    currentBet: 300
+  },
+  {
+    id: 'left-3',
+    side: 'LEFT',
+    rank: 3,
+    name: 'Narjy',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80',
+    chipsAmount: 39937.85,
+    betTarget: 'DOWN',
+    currentBet: 200
+  },
+
+  // RIGHT SIDE (Top Win Streak / Most Wins: Rank 1, 2, 3 as shown in screenshot)
+  {
+    id: 'right-1',
+    side: 'RIGHT',
+    rank: 1,
+    name: 'name316082',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+    titleBadge: 'হিউম্যান ক্যালকুলেটর',
+    chipsAmount: 40805.42,
+    winStreak: 18,
+    betTarget: 'SEVEN',
+    currentBet: 200
+  },
+  {
+    id: 'right-2',
+    side: 'RIGHT',
+    rank: 2,
+    name: 'name781757',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80',
+    chipsAmount: 47014.30,
+    winStreak: 12,
+    betTarget: 'UP',
+    currentBet: 400
+  },
+  {
+    id: 'right-3',
+    side: 'RIGHT',
+    rank: 3,
+    name: 'name528300',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
+    chipsAmount: 39941.89,
+    winStreak: 9,
+    betTarget: 'SEVEN',
+    currentBet: 100
+  }
 ];
 
 const initialCasinoHistory: SevenUpDownHistoryItem[] = [
@@ -656,7 +771,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               mult = settings.sevenUpDownConfig.payoutMultiplierDown || 2.0;
             }
             wonAmt = Math.round(userBetOnWinningTarget * mult);
-            winMsg = `তুমি জিতেছিলে +${wonAmt.toFixed(2)}`;
+            winMsg = `You Win +${wonAmt.toFixed(2)}`;
 
             // Credit winning balance to user
             if (currentUser) {
@@ -1480,6 +1595,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     sound.playVictory();
   };
 
+  const addHeroBanner = (banner: Omit<HeroBannerItem, 'id'>) => {
+    const newBanner: HeroBannerItem = {
+      ...banner,
+      id: `b-${Date.now()}`
+    };
+    setSettings(prev => ({
+      ...prev,
+      heroBanners: [...(prev.heroBanners || initialHeroBanners), newBanner]
+    }));
+    sound.playCoin();
+  };
+
+  const updateHeroBanner = (banner: HeroBannerItem) => {
+    setSettings(prev => ({
+      ...prev,
+      heroBanners: (prev.heroBanners || initialHeroBanners).map(b => b.id === banner.id ? banner : b)
+    }));
+    sound.playClick();
+  };
+
+  const deleteHeroBanner = (id: string) => {
+    setSettings(prev => ({
+      ...prev,
+      heroBanners: (prev.heroBanners || initialHeroBanners).filter(b => b.id !== id)
+    }));
+    sound.playClick();
+  };
+
+  const updateTopAdBanner = (ad: Partial<TopAdBanner>) => {
+    setSettings(prev => ({
+      ...prev,
+      topAdBanner: {
+        ...(prev.topAdBanner || initialSettings.topAdBanner),
+        ...ad
+      }
+    }));
+    sound.playClick();
+  };
+
   const updateSettings = (newSettings: Partial<AppSettings>) => {
     setSettings(prev => ({ ...prev, ...newSettings }));
   };
@@ -1582,7 +1736,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedTournamentForJoin,
         setSelectedTournamentForJoin,
         selectedTournamentForRoom,
-        setSelectedTournamentForRoom
+        setSelectedTournamentForRoom,
+        addHeroBanner,
+        updateHeroBanner,
+        deleteHeroBanner,
+        updateTopAdBanner
       }}
     >
       {children}

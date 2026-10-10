@@ -8,14 +8,15 @@ export const HeroSlider: React.FC = () => {
   const { settings, setActiveModal, setIs7Up7DownModalOpen } = useApp();
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  const banners = [
+  const fallbackBanners = [
     {
       id: 'b-1',
       title: 'XEB TOUR গ্র্যান্ড টুর্নামেন্ট এরিনা',
       subtitle: 'Free Fire BR & Clash Squad এন্ট্রি নিন ও আসল প্রাইজ পুল জিতুন',
       imageUrl: ASSET_IMAGES.heroBanner,
       tag: 'FEATURED ESPORTS',
-      action: 'ESPORTS'
+      action: 'ESPORTS' as const,
+      isEnabled: true
     },
     {
       id: 'b-2',
@@ -23,7 +24,8 @@ export const HeroSlider: React.FC = () => {
       subtitle: '২-৬ ডাউন, ৮-১২ আপ এবং লাকি ৭ ডাইস বাজি ধরে লাইভ জয়ী হোন!',
       imageUrl: ASSET_IMAGES.gameMode7Up7Down,
       tag: 'HOT CASINO GAME',
-      action: 'SEVEN_UP'
+      action: 'SEVEN_UP' as const,
+      isEnabled: true
     },
     {
       id: 'b-3',
@@ -31,9 +33,16 @@ export const HeroSlider: React.FC = () => {
       subtitle: '১০০% ফেয়ার ও আসল ডাইস রোলিং সিস্টেমে খেলুন',
       imageUrl: ASSET_IMAGES.gameModeLudo,
       tag: 'LUDO KING LIVE',
-      action: 'LUDO'
+      action: 'LUDO' as const,
+      isEnabled: true
     }
   ];
+
+  const activeBanners = settings.heroBanners && settings.heroBanners.length > 0
+    ? settings.heroBanners.filter(b => b.isEnabled)
+    : fallbackBanners;
+
+  const banners = activeBanners.length > 0 ? activeBanners : fallbackBanners;
 
   useEffect(() => {
     if (banners.length <= 1) return;
@@ -43,12 +52,14 @@ export const HeroSlider: React.FC = () => {
     return () => clearInterval(interval);
   }, [banners.length]);
 
-  const handleBannerAction = (action: string) => {
+  const handleBannerAction = (banner: typeof banners[0]) => {
     sound.playClick();
-    if (action === 'SEVEN_UP') {
+    if (banner.action === 'SEVEN_UP') {
       setIs7Up7DownModalOpen(true);
-    } else if (action === 'LUDO') {
+    } else if (banner.action === 'LUDO') {
       setActiveModal('LUDO_ARENA');
+    } else if (banner.action === 'LINK' && banner.externalUrl) {
+      window.open(banner.externalUrl, '_blank');
     } else {
       const el = document.getElementById('matches-section');
       if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -66,7 +77,7 @@ export const HeroSlider: React.FC = () => {
           <div 
             key={banner.id}
             className="w-full flex-shrink-0 relative overflow-hidden cursor-pointer"
-            onClick={() => handleBannerAction(banner.action)}
+            onClick={() => handleBannerAction(banner)}
           >
             <img
               src={banner.imageUrl}
